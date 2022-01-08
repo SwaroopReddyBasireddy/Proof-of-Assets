@@ -10,7 +10,7 @@ If you are a developer who is completely new to zk-SNARKS I’d recommend readin
 
 For a more in-depth description of how zk-SNARKs work under the hood, please read Vitalik’s excellent [three post introduction](https://medium.com/@VitalikButerin/quadratic-arithmetic-programs-from-zero-to-hero-f6d558cea649).
 
-# Quick intro to R1CS
+# Quick intro to R1CS (Rank1 Consraint System)
  
 A *Rank One Constraint System* (R1CS) is a way to express a computation that makes it amenable to zero knowledge proofs. Basically any computation can be reduced (or flattened) to an R1CS. A single rank one constraint on a vector w is defined as
 
