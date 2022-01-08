@@ -1,0 +1,7 @@
+#include "libsnark/gadgetlib1/gadgets/basic_gadgets.hpp"
+#include "libff/algebra/curves/mnt/mnt4/mnt4_pp.hpp"
+#include "libff/algebra/curves/mnt/mnt6/mnt6_pp.hpp"
+#include "libff/algebra/fields/field_utils.hpp"
+#include "libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp"
+#include "libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp"
+#include "libsnark/gadgetlib1/pb_variable.hpp"

@@ -1,0 +1,73 @@
+#include <libff/algebra/fields/field_utils.hpp>
+#include <libff/common/default_types/ec_pp.hpp>
+#include <libff/common/profiling.hpp>
+#include <libff/common/utils.hpp>
+#include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
+#include <libsnark/gadgetlib1/gadgets/hashes/ripemd160/ripemd160_gadget.hpp>
+#include <libsnark/gadgetlib1/pb_variable.hpp>
+#include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
+#include <util.hpp>
+
+using namespace libsnark;
+using namespace std;
+
+int main()
+{
+  default_r1cs_gg_ppzksnark_pp::init_public_params();
+  typedef libff::Fr<default_r1cs_gg_ppzksnark_pp> FieldT;
+  protoboard<FieldT> pb;
+
+  pb_variable_array<FieldT> hash_packed;
+  hash_packed.allocate(pb, 2, "hash packed");
+
+  
+
+  digest_variable<FieldT> hash_bits(pb, RIPEMD160_digest_size, "hash_bits");
+  digest_variable<FieldT> left_bits(pb, RIPEMD160_block_size/2, "left_bits");
+  digest_variable<FieldT> right_bits(pb, RIPEMD160_block_size/2, "right_bits");
+  pb.set_input_sizes(1);
+  
+  multipacking_gadget<FieldT> packer(pb, hash_bits.bits, hash_packed, 80, "packer");
+  packer.generate_r1cs_constraints(true);
+  
+  ripemd160_two_to_one_hash_gadget<FieldT> hasher(pb, left_bits, right_bits, hash_bits, "hash_gadget");
+  hasher.generate_r1cs_constraints();
+  
+  const libff::bit_vector left_bv  = libff::int_list_to_bits({0x8414d7c5, 0xf49bcff8, 0x90476fb7, 0x4b803047, 0xa925329e, 0xdeb533f1, 0xe2f468a1, 0x2f071f85}, 32);
+  const libff::bit_vector right_bv = libff::int_list_to_bits({0xaafc00cc, 0x6120a67c, 0xe5487a71, 0xfaa3292e, 0x3f959a37, 0xe39368aa, 0x7ba2c52e, 0x5f605e94}, 32);
+  const libff::bit_vector hash_bv  = libff::int_list_to_bits({0xce35e9e3, 0xbd0c0250, 0xacc773fd, 0x407df071, 0x333236dc}, 32);
+  
+  left_bits.generate_r1cs_witness(left_bv);
+  right_bits.generate_r1cs_witness(right_bv);
+  
+  hasher.generate_r1cs_witness();
+  hash_bits.generate_r1cs_witness(hash_bv);
+  
+  
+  packer.generate_r1cs_witness_from_bits();
+
+  const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
+  const r1cs_gg_ppzksnark_keypair<default_r1cs_gg_ppzksnark_pp> keypair = r1cs_gg_ppzksnark_generator<default_r1cs_gg_ppzksnark_pp>(constraint_system);
+  const r1cs_gg_ppzksnark_proof<default_r1cs_gg_ppzksnark_pp> proof = r1cs_gg_ppzksnark_prover<default_r1cs_gg_ppzksnark_pp>(keypair.pk, pb.primary_input(), pb.auxiliary_input());
+  bool verified = r1cs_gg_ppzksnark_verifier_strong_IC<default_r1cs_gg_ppzksnark_pp>(keypair.vk, pb.primary_input(), proof);
+
+  if (hash_bits.get_digest() != hash_bv) {
+	 // cout << hash_bv << endl;
+	 cout << hasher.get_digest_len() << endl;
+    cout << "Hash doesn't match expected value." << endl;
+   // return 1;
+  }
+
+
+  cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << endl;
+  cout << "Primary (public) input: " << pb.primary_input() << endl;
+  cout << "Verification status: " << verified << endl;
+  //cout << hash_bv << endl;
+  cout << sizeof(proof) << endl;
+  const r1cs_gg_ppzksnark_verification_key<default_r1cs_gg_ppzksnark_pp> vk = keypair.vk;
+
+ // print_vk_to_file<default_r1cs_gg_ppzksnark_pp>(vk, "../build/vk_data");
+ // print_proof_to_file<default_r1cs_gg_ppzksnark_pp>(proof, "../build/proof_data");
+
+  return 0;
+}
